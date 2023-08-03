@@ -1,3 +1,6 @@
+from matplotlib import use as m_use
+m_use('TkAgg')
+
 import sidrapy
 import pandas as pd
 from matplotlib import pyplot
@@ -33,16 +36,27 @@ data['Valor'] = data['Valor'].astype('float64')
 g = sns.FacetGrid(data, col="Setores e subsetores", height=2.5, col_wrap=3)
 g.map_dataframe(sns.lineplot, x = 'date', y='Valor')
 
-# Deseasonalizing
+# Pivoting
 
-Y = data['Valor'].loc[data['Setores e subsetores'] == 'PIB a preços de mercado']
-Quarter = data.loc[data['Setores e subsetores'] == 'PIB a preços de mercado'][data.columns[1]].str.slice(0,1)
+data['Quarter'] = data[data.columns[1]].str.slice(0,1)
+
+df = data.pivot(index = ['date', 'Quarter'], columns = 'Setores e subsetores', values = 'Valor')
+
+df['date'] = df.index.get_level_values(0)
+df['Quarter'] = df.index.get_level_values(1)
+
+# Deseasonalizing
 
 import numpy as np
 from sklearn.linear_model import LinearRegression
 
+df[df.columns[1]].str.slice(0,1)
+
+Y = data['Valor'].loc[data['Setores e subsetores'] == 'PIB a preços de mercado']
+Quarter = data.loc[data['Setores e subsetores'] == 'PIB a preços de mercado'][data.columns[1]].str.slice(0,1)
+
 X = pd.get_dummies(Quarter, drop_first=False)
 model_deseas = LinearRegression(fit_intercept = False)
-model_deseas.fit(X = X, y = Y)
+print(Y - model_deseas.fit(X = X, y = Y).predict(X))
 
 sns.lineplot(data = Y - model_deseas.predict(X) + np.mean(Y))
